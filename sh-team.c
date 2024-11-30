@@ -31,8 +31,8 @@ int main(void) {
     pid_t pid;
     int is_background;
 
-    signal(SIGINT, handle_signal); // SIGINT (Ctrl-C) 처리
-    signal(SIGQUIT, handle_signal); // SIGQUIT (Ctrl-Z) 처리
+    signal(SIGINT, handle_signal);
+    signal(SIGQUIT, handle_signal);
 
     while (1) {
         // 쉘 프롬프트 출력
@@ -63,13 +63,12 @@ int main(void) {
         is_background = 0;
         if (len > 0 && buf[len - 1] == '&') {
             is_background = 1;
-            buf[len - 1] = '\0'; // Remove '&'
+            buf[len - 1] = '\0';
             len--;
         }
 
         narg = getargs(buf, argv);
 
-        // cd 명령어 처리
         if (strcmp(argv[0], "cd") == 0) {
             if (narg == 1) {
                 printf("cd: missing argument\n");
@@ -78,45 +77,43 @@ int main(void) {
                     perror("cd failed");
                 }
             }
-            continue; // cd 명령어는 자식 프로세스에서 실행하지 않음
+            continue;
         }
-
-        // 명령어 처리 (리디렉션 및 파이프 처리 포함)
+        
+        // 자식 프로세스 생성
         pid = fork();
-        if (pid == 0) { // 자식 프로세스: 명령어 실행
-            // 파일 재지향 처리 및 파이프 처리
+        if (pid == 0) {
             handle_redirection_and_pipes(argv, narg);
 
-            // function_* 함수들로 명령어 처리
             if (strcmp(argv[0], "ls") == 0) {
-                function_ls(argv);
+                function_ls(argv);                            // ls 명령어 
             } else if (strcmp(argv[0], "pwd") == 0) {
-                function_pwd(argv);
+                function_pwd(argv);                           // pwd 명령어 
             } else if (strcmp(argv[0], "echo") == 0) {
-                function_echo(argv);
+                function_echo(argv);                          // echo 명령어 
             } else if (strcmp(argv[0], "mkdir") == 0) {
-                function_mkdir(argv);
+                function_mkdir(argv);                         // mkdir 명령어 
             } else if (strcmp(argv[0], "rmdir") == 0) {
-                function_rmdir(argv);
+                function_rmdir(argv);                         // rmdir 명령어 
             } else if (strcmp(argv[0], "ln") == 0) {
-                function_ln(argv);
+                function_ln(argv);                            // ln 명령어 
             } else if (strcmp(argv[0], "cp") == 0) {
-                function_cp(argv);
+                function_cp(argv);                            // cp 명령어 
             } else if (strcmp(argv[0], "rm") == 0) {
-                function_rm(argv);
+                function_rm(argv);                            // rm 명령어 
             } else if (strcmp(argv[0], "mv") == 0) {
-                function_mv(argv);
+                function_mv(argv);                            // mv 명령어 
             } else if (strcmp(argv[0], "cat") == 0) {
-                function_cat(argv);
+                function_cat(argv);                           // cat 명령어 
             } else {
-                printf("Unknown command: %s\n", argv[0]);
+                printf("Unknown command: %s\n", argv[0]);     // 만들지 않은 명령어
                 exit(EXIT_FAILURE);
             }
-            exit(EXIT_SUCCESS); // 명령어 실행 후 종료
-        } else if (pid > 0) { // 부모 프로세스
-            if (!is_background) { // 백그라운드가 아니면 자식 프로세스 종료를 기다림
+            exit(EXIT_SUCCESS);
+        } else if (pid > 0) { 
+            if (!is_background) {
                 waitpid(pid, NULL, 0);
-            } else { // 백그라운드 명령어를 실행하고 바로 다음 프롬프트로 돌아감
+            } else {
                 printf("Process running in background with PID: %d\n", pid);
             }
         } else {
@@ -159,13 +156,12 @@ void handle_redirection_and_pipes(char **argv, int narg) {
     int pipe_fds[2];
     int in_fd = STDIN_FILENO;
     int out_fd = STDOUT_FILENO;
-
-    // 파이프 처리
     int pipe_flag = 0;
+    
     for (i = 0; i < narg; i++) {
         if (strcmp(argv[i], "|") == 0) {
-            argv[i] = NULL;  // 파이프 위치에서 명령어 분리
-            pipe_flag = 1;   // 파이프가 있음을 표시
+            argv[i] = NULL;
+            pipe_flag = 1;
             break;
         }
     }
@@ -173,20 +169,20 @@ void handle_redirection_and_pipes(char **argv, int narg) {
     if (pipe_flag) {
         pipe(pipe_fds);
         if (fork() == 0) {
-            dup2(pipe_fds[1], STDOUT_FILENO); // 출력 파이프 연결
+            dup2(pipe_fds[1], STDOUT_FILENO);
             close(pipe_fds[0]);
-            execvp(argv[0], argv); // 첫 번째 명령어 실행
+            execvp(argv[0], argv);
             perror("exec failed");
             exit(EXIT_FAILURE);
         } else {
-            dup2(pipe_fds[0], STDIN_FILENO); // 입력 파이프 연결
+            dup2(pipe_fds[0], STDIN_FILENO);
             close(pipe_fds[1]);
-            execvp(argv[i + 1], &argv[i + 1]); // 두 번째 명령어 실행
+            execvp(argv[i + 1], &argv[i + 1]);
             perror("exec failed");
             exit(EXIT_FAILURE);
         }
     }
-    // 기존의 리디렉션 처리
+
     for (i = 0; i < narg; i++) {
         if (strcmp(argv[i], ">") == 0) {
             argv[i] = NULL;
@@ -210,7 +206,7 @@ void handle_redirection_and_pipes(char **argv, int narg) {
     }
 }
 
-// 'echo' 명령어 처리
+// echo 명령어 처리
 void function_echo(char **argv) {
     for (int i = 1; argv[i] != NULL; i++) {
         printf("%s ", argv[i]);
@@ -218,118 +214,100 @@ void function_echo(char **argv) {
     printf("\n");
 }
 
-// 'ls' 명령어 처리
+// ls 명령어 처리
 void function_ls(char **argv) {
     execvp("/bin/ls", argv);
     perror("ls failed");
     exit(EXIT_FAILURE);
 }
 
-// 'pwd' 명령어 처리
+// pwd 명령어 처리
 void function_pwd(char **argv) {
     execvp("/bin/pwd", argv);
     perror("pwd failed");
     exit(EXIT_FAILURE);
 }
 
-// 'mkdir' 명령어 처리
+// mkdir 명령어 처리
 void function_mkdir(char **argv) {
-    if (mkdir(argv[1], 0755) == -1) {
+    if (argv[1] == NULL) {
+        printf("Usage: mkdir <directory>\n");
+        return;
+    }
+
+    if (execvp("mkdir", argv) == -1) {
         perror("mkdir failed");
+        exit(EXIT_FAILURE);
     }
 }
 
-// 'rmdir' 명령어 처리
+// rmdir 명령어 처리
 void function_rmdir(char **argv) {
-    if (rmdir(argv[1]) == -1) {
+    if (argv[1] == NULL) {
+        printf("Usage: rmdir <directory>\n");
+        return;
+    }
+
+    if (execvp("rmdir", argv) == -1) {
         perror("rmdir failed");
+        exit(EXIT_FAILURE);
     }
 }
 
-// 'ln' 명령어 처리
+// ln 명령어 처리
 void function_ln(char **argv) {
-    if (link(argv[1], argv[2]) == -1) {
+    if (argv[1] == NULL || argv[2] == NULL) {
+        printf("Usage: ln <source> <destination>\n");
+        return;
+    }
+
+    if (execvp("ln", argv) == -1) {
         perror("ln failed");
+        exit(EXIT_FAILURE);
     }
 }
 
-// 'cp' 명령어 처리
+// cp 명령어 처리
 void function_cp(char **argv) {
     if (argv[1] == NULL || argv[2] == NULL) {
         printf("Usage: cp <source> <destination>\n");
         return;
     }
 
-    int src_fd, dest_fd;
-    char buffer[1024];
-    ssize_t bytes_read, bytes_written;
-
-    // 소스 파일 열기
-    src_fd = open(argv[1], O_RDONLY);
-    if (src_fd == -1) {
-        perror("Failed to open source file");
-        return;
+    if (execvp("cp", argv) == -1) {
+        perror("cp failed");
+        exit(EXIT_FAILURE);
     }
-
-    // 대상 파일 열기 (쓰기 모드)
-    dest_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (dest_fd == -1) {
-        perror("Failed to open destination file");
-        close(src_fd);
-        return;
-    }
-
-    // 파일 복사
-    while ((bytes_read = read(src_fd, buffer, sizeof(buffer))) > 0) {
-        bytes_written = write(dest_fd, buffer, bytes_read);
-        if (bytes_written != bytes_read) {
-            perror("Error writing to destination file");
-            close(src_fd);
-            close(dest_fd);
-            return;
-        }
-    }
-
-    if (bytes_read == -1) {
-        perror("Error reading source file");
-    }
-
-    // 파일 닫기
-    close(src_fd);
-    close(dest_fd);
-
-    printf("파일 복사 성공\n");
 }
 
-// 'rm' 명령어 처리
 void function_rm(char **argv) {
-    if (remove(argv[1]) == -1) {
+    if (argv[1] == NULL) {
+        printf("Usage: rm <file>\n");
+        return;
+    }
+
+    if (execvp("rm", argv) == -1) {
         perror("rm failed");
+        exit(EXIT_FAILURE);
     }
 }
 
-// 'mv' 명령어 처리
+// mv 명령어 처리
 void function_mv(char **argv) {
-    struct stat statbuf;
-    if (stat(argv[2], &statbuf) == 0 && S_ISDIR(statbuf.st_mode)) {
-        // 두 번째 인자가 디렉터리인 경우, 파일을 해당 디렉터리로 이동
-        char new_path[1024];
-        snprintf(new_path, sizeof(new_path), "%s/%s", argv[2], argv[1]);
-        if (rename(argv[1], new_path) == -1) {
-            perror("mv failed");
-        }
-    } else {
-        // 두 번째 인자가 디렉터리가 아니면 기존 방식으로 이동
-        if (rename(argv[1], argv[2]) == -1) {
-            perror("mv failed");
-        }
+    if (argv[1] == NULL || argv[2] == NULL) {
+        printf("Usage: mv <source> <destination>\n");
+        return;
+    }
+
+    if (execvp("mv", argv) == -1) {
+        perror("mv failed");
+        exit(EXIT_FAILURE);
     }
 }
 
-// 'cat' 명령어 처리
+// cat 명령어 처리
 void function_cat(char **argv) {
     execvp("/bin/cat", argv);
     perror("cat failed");
     exit(EXIT_FAILURE);
 }
-
